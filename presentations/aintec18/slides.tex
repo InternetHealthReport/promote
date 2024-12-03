@@ -1,0 +1,763 @@
+\documentclass{beamer}
+
+\usepackage{nth}
+\graphicspath{{../../tartiflette/imc17/}{../../disco/tma17/}{../../hegemony/umass/}{../../hegemony/pam18/}}
+
+\newcommand{\backupbegin}{
+   \newcounter{finalframe}
+   \setcounter{finalframe}{\value{framenumber}}
+}
+\newcommand{\backupend}{
+   \setcounter{framenumber}{\value{finalframe}}
+}
+\newcommand\blfootnote[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}
+
+\usetheme{metropolis}
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{block title}{bg=white}
+\setbeamercolor{block body}{bg=white}
+
+\title{Monitoring Internet Health at Scale}
+
+\author[shortname]{Romain Fontugne \\ IIJ Research Lab}
+%\institute[shortinst]{\inst{1} IIJ Research Lab, \inst{2} Colorado State University, \inst{3} RIPE NCC}
+
+\date{\vfill\hfill\vspace{-1cm}\scriptsize{November 12, 2018, AINTEC, Bangkok} }
+% Used with singapore template
+%\titlegraphic{~\\ \includegraphics[width=.2\textwidth]{./fig/iijlogo.jpg}} 
+%\beamertemplatenavigationsymbolsempty
+
+
+\setbeamertemplate{footline}[frame number]
+\begin{document}
+\frame[plain,noframenumbering]{\titlepage}
+
+\frame{
+    \frametitle{Collaborations/Publications}
+
+    \begin{block}{Collaborators}
+        \begin{itemize}
+            \item Anant Shah (Verizon)
+            \item Emile Aben (RIPE NCC)
+            \item Cristel Pelsser (Strasbourg University)
+            \item Randy Bush (IIJ)
+        \end{itemize}
+    \end{block}
+    \begin{block}{References}
+        \scriptsize{
+        \begin{itemize}
+            \item A. Shah et al.  "Disco: Fast, good, and cheap outage detection", TMA'17.
+            \item R. Fontugne et al. "Pinpointing Delay and Forwarding Anomalies Using Large-Scale Traceroute Measurements", IMC'17.
+            \item R. Fontugne et al. "The (thin) Bridges of AS Connectivity: Measuring Dependency using AS Hegemony", PAM'18.
+        \end{itemize}
+        }
+    \end{block}
+
+
+}
+
+\frame{
+    \frametitle{Outline}
+    \begin{block}{Monitoring Internet Health at Scale}
+        \begin{itemize}
+            \item Why do we monitor networks conditions?
+            \item What are the main difficulties?
+            \item Overview of Internet Health Report (IHR)
+            \begin{itemize}
+                \item Delay \& forwarding anomaly detector
+                \item Outage detector
+                \item AS dependency
+            \end{itemize}
+        \end{itemize}
+    \end{block}
+}
+
+\frame{
+\frametitle{Internet: a network of networks}
+\begin{block}{}
+\begin{overlayarea}{\textwidth}{.7\textheight}
+    \only<1>{\includegraphics[width=\columnwidth]{../../tartiflette/imc17/fig/tartiflette_background.pdf}}
+    \only<2>{\includegraphics[width=\columnwidth]{../../tartiflette/imc17/fig/tartiflette_complaints.pdf}}
+    \only<3>{\includegraphics[width=\columnwidth]{../../tartiflette/imc17/fig/tartiflette_operator.pdf}}
+\end{overlayarea}
+\end{block}
+}
+
+\frame{
+    \frametitle{Internet's Health?}
+
+    \begin{block}{Goal: Monitor Internet's Health}
+        \begin{itemize}
+            \item Automatically pinpoint connectivity issues
+        \end{itemize}
+    \end{block}
+
+    \begin{columns}
+        \column{.6\textwidth}
+        \begin{block}{Main Challenges:}
+            \begin{itemize}
+                \item Limited views on remote networks
+                \item Slow process
+                \item Internet is huge 
+                    \begin{itemize}
+                        \item Over 60k autonomous systems
+                        %\item Billions of connected devices
+                    \end{itemize}
+                \item Constantly evolving 
+            \end{itemize}
+        \end{block}
+        \column{.3\textwidth}
+        \includegraphics[width=\textwidth]{fig/xkcd_telescope.png}
+    \end{columns}
+}
+
+\frame{
+    \frametitle{Problem Space / Data sources}
+        \includegraphics[width=\textwidth]{fig/problem-space.pdf}
+}
+
+
+\frame{
+    \frametitle{Internet Health Report: Current Status}
+    \begin{columns}
+        \column{.5\textwidth}
+        \begin{block}{Internet Health Report}
+            \begin{itemize}
+                \item \url{https://ihr.iijlab.net}
+                \item Results publicly available 
+                \item Open source code
+            \end{itemize}
+        \end{block}
+        \begin{block}{Three main components}
+            %\includegraphics[width=\textwidth]{fig/atlas.jpg}
+            \begin{itemize}
+                \item Delay/forwarding anomaly detection (traceroute)
+                \item Outages detection (Atlas)
+                \item AS dependencies monitoring (BGP)
+            \end{itemize}
+        \end{block} 
+        \column{.5\textwidth}
+        \includegraphics[width=\columnwidth]{fig/ihr_example.png}
+    \end{columns}
+}
+
+\frame{
+    \frametitle{Delay/Forwarding anomaly detection}
+    \begin{center}
+        \begin{tikzpicture}
+        \node[anchor=south west,inner sep=0] at (0,0) {\includegraphics[height=.9\textheight]{./fig/ihr_iij.png}};
+        \draw[red,ultra thick,rounded corners] (.1,2.) rectangle (6.1,4.9);
+        \end{tikzpicture}
+    \end{center}
+}
+
+\frame{
+    \frametitle{Goal and Dataset}
+    \begin{columns}
+        \column{.6\textwidth}
+        \begin{block}{Goal}
+            \begin{itemize}
+                \item Monitor abnormal delays and routes in traceroutes
+            \end{itemize}
+        \end{block}
+    \begin{block}{RIPE Atlas measurement platform}
+        \begin{itemize}
+            \item About 10k devices world-wide
+            \item Pings, traceroutes, DNS, NTP, HTTP, SSL measurements
+            \item Long-lasting measurements
+        \end{itemize}
+    \end{block}
+        \column{.4\textwidth}
+        \includegraphics[width=1\textwidth]{fig/probe-v3-new-logo.jpg}
+        \\~\\
+
+        \includegraphics[width=1.\textwidth]{fig/atlas.jpg}
+    \end{columns}
+}
+\frame{
+
+    \frametitle{Monitor delays with traceroute?}
+    \begin{columns}
+        \column{.25\textwidth}
+        %\textbf{Challenges:} (1) Noisy data, (2) Traffic asymmetry, (3) Packet loss
+        \begin{block}{Challenges:}
+        \begin{itemize}
+            \item Noisy data
+            \item Traffic asymmetry
+            \item Packet loss
+        \end{itemize}
+        \end{block} 
+        \column{.75\textwidth}
+        \begin{center}
+            \includegraphics[width=.8\textwidth]{fig/rttRawValues_prbId6006.eps}\\
+            \includegraphics[width=.9\textwidth]{fig/tartiflette_challenges.pdf}
+        \end{center}
+    \end{columns}
+}
+
+
+\frame{
+    \frametitle{Approach (1)}
+    \begin{columns}
+        \column{.6\textwidth}
+    \begin{block}{Monitor in-network delays}
+        \begin{itemize}
+            \item Combine traceroutes from multiple probes
+            \item Compute the median RTT for common hops
+        \end{itemize}
+    \end{block}
+    \begin{block}{Benefits}
+        \begin{itemize}
+            \item Robust to noise
+            \item Mitigate traffic asymmetry problems
+        \end{itemize}
+    \end{block}
+        \column{.4\textwidth}
+        %\includegraphics[width=1.\textwidth]{../../disco/tma17/fig/atlas.jpg}
+        %\\~\\
+
+        \includegraphics[width=1\textwidth]{fig/diversity2.pdf}
+    \end{columns}
+}
+
+\frame{
+    \frametitle{Median Diff. RTT: Example}
+    \begin{block}{Tier1 link, 2 weeks of data, 95 probes:}
+    \end{block}
+    \includegraphics[width=.99\textwidth]{fig/130_117_0_250_154_54_38_50_samples.eps}\\
+    \includegraphics[width=.99\textwidth]{fig/130_117_0_250_154_54_38_50_0Alarms_rttModel.eps}
+    \begin{columns}
+        \column{.5\textwidth}
+        \begin{itemize}
+            \item \textbf{Stable} despite noisy RTTs
+            \item Normally distributed 
+        \end{itemize}
+        \column{.5\textwidth}
+        \begin{itemize}
+            \item Conf. interval: Wilson score
+            \item Normal ref.: exp. smooth.
+        \end{itemize}
+        %\includegraphics[width=\columnwidth]{fig/130_117_0_250_154_54_38_50_0Alarms_qqplot.eps}
+    \end{columns}
+}
+
+\frame{
+    \frametitle{Detecting Delay Changes}
+    \includegraphics[width=\textwidth]{fig/72_52_92_14_80_81_192_154_2Alarms_rttModel.eps}
+    \begin{block}{Significant RTT changes:} 
+        Confidence interval not overlapping with the normal reference
+    \end{block}
+}
+
+\frame{
+    \frametitle{Approach (2)}
+    \begin{block}{Monitor forwarding anomalies}
+        \begin{itemize}
+            \item Sometimes we don't obtain expected data
+                \begin{itemize}
+                    \item Traffic is rerouted
+                    \item Router is not responding
+                \end{itemize}
+            \item Cannot obtain RTT values
+            %\item Need to identify the faulty link 
+        \end{itemize}
+    \end{block}
+    \begin{center}
+        %\includegraphics[width=.8\textwidth]{fig/pktLoss.pdf}
+        \textcolor{red}{$\rightarrow$ Need to model usual routes}
+    \end{center}
+}
+
+\frame{
+    \frametitle{Packet forwarding model}
+    \begin{block}{Learn usual paths from past traceroutes:}
+    \begin{center}
+        \includegraphics[width=.8\textwidth]{fig/pktLoss_model.pdf}
+    \end{center}
+    \end{block}
+}
+
+\frame{
+\frametitle{Identifying faulty links}
+    \begin{block}{In case of packet loss:}
+        \centering
+        \includegraphics[width=.7\textwidth]{fig/pktLoss2.pdf}
+    \end{block}
+    \begin{block}{Query the model for the expected next hop}
+        \centering
+        \includegraphics[width=.7\textwidth]{fig/pktLoss_model_only.pdf}\\
+        $\rightarrow$ Link AB is dropping packets!
+    \end{block}
+}
+
+
+\frame{
+    \frametitle{Case study: DDoS on DNS root servers}
+    \begin{columns}
+        \column{.33\textwidth}
+        \begin{block}{Two attacks:}
+            \begin{itemize}
+                \item Nov. 30th 2015
+                \item Dec. 1st 2015
+            \end{itemize}
+        \end{block}
+        \begin{block}{Almost all server are anycast}
+            \begin{itemize}
+                \item Congestion at the 531 sites?
+                \item Found 129 instances altered by the attacks
+            \end{itemize}
+        \end{block}
+        ~\\~\\
+        ~\\~\\
+
+        \column{.66\textwidth}
+        \includegraphics[width=.9\columnwidth]{fig/screenshot_root.png}
+    \end{columns}
+}
+
+\frame{
+    \frametitle{Observed delay changes}
+    \begin{columns}
+        \column{.7\textwidth}
+        \begin{center}
+            \includegraphics[width=\textwidth]{fig/193_0_14_129_74_208_6_124_3Alarms_rttModel.eps}\\
+            %\includegraphics[width=7textwidth]{fig/193_0_14_129_80_81_192_154_2Alarms_rttModel.eps}\\
+            \includegraphics[width=\textwidth]{fig/72_52_92_14_80_81_192_154_2Alarms_rttModel.eps}\\
+            %\includegraphics[width=\textwidth]{./fig/188_93_16_77_193_0_14_129_14Alarms_rttModel.eps}
+            \includegraphics[width=\textwidth]{./fig/188_93_16_77_95_213_189_0_12Alarms_rttModel.eps}
+        \end{center}
+        \column{.4\textwidth}
+        \begin{itemize}
+            \item  Certain servers are affected only by one attack
+            \item Continuous attack in Russia
+        \end{itemize}
+    \end{columns}
+
+}
+
+\frame{
+    \frametitle{Unaffected root servers}
+    \begin{center}
+        \includegraphics[width=\textwidth]{./fig/193_0_14_129_212_191_229_90_0Alarms_rttModel.eps}
+    \end{center}
+    \begin{block}{Very stable delay during the attacks}
+        \begin{itemize}
+            \item Thanks to anycast!
+            \item Far from the attackers
+        \end{itemize}
+    \end{block}
+}
+
+
+\frame{
+    \frametitle{Study case: Telekom Malaysia BGP leak}
+    \begin{center}
+        \includegraphics[width=\textwidth]{fig/screenshot_TM.jpeg}
+    \end{center}
+}
+
+\frame{
+    \frametitle{Study case: Telekom Malaysia BGP leak}
+    \begin{center}
+        \only<1>{\includegraphics[width=.7\textwidth]{fig/tm.pdf}}
+        \only<2>{\includegraphics[width=.7\textwidth]{fig/tm_normal.pdf}}
+        \only<3>{\includegraphics[width=.7\textwidth]{fig/tm_leak.pdf}}
+        \only<4>{\includegraphics[width=.7\textwidth]{fig/tm_problem.pdf} }\\
+        \only<4>{\textcolor{red}{Not only with Google... but about \textbf{170k prefixes!}}}
+    \end{center}
+}
+
+\frame{
+    \frametitle{Congestion in Level3}
+    \begin{block}{Rerouted traffic has congested Level3 (120 reported links)}
+    \begin{itemize}
+        \item Example: 229ms increase between two routers in London!
+    \end{itemize}
+    \includegraphics[width=\textwidth]{fig/67_16_133_130_67_17_106_150_2Alarms_rttModel.eps}
+    \end{block}
+}
+
+\frame{
+    \frametitle{Congestion in Level3}
+
+    \begin{block}{Reported links in London:}
+        \centering
+        \includegraphics[width=.7\textwidth]{fig/l3gblx.pdf}\\~\\
+        \textcolor{red}{$\rightarrow$ Traffic staying within UK/Europe may also be altered}
+    \end{block}
+}
+
+\frame{
+    \frametitle{More Examples}
+    \begin{block}{Examples from IHR website:}
+        \begin{itemize}
+            \item \href{https://ihr.iijlab.net/ihr/2914/asn/?date=2018-02-05&last=7&tartiflettedate=2018-02-01+18\%3A30&tartiflettey=y&af=4&}{Delay increase on JP/AU sea cable}
+            \item \href{https://ihr.iijlab.net/ihr/32787/asn/?date=2018-03-02&af=4&last=7}{Akamai/prolexic delay increase during memcached DDoS attacks}
+            %\item \href{http://ihr.iijlab.net/ihr/174/asn/?date=2017-11-02&last=3}{Packets wandering in Cognent}
+        \end{itemize}
+    \end{block}
+
+}
+
+
+\frame{
+    \frametitle{Outage Detection}
+    \begin{center}
+        \begin{tikzpicture}
+        \node[anchor=south west,inner sep=0] at (0,0) {\includegraphics[height=.9\textheight]{./fig/ihr_iij.png}};
+        \draw[red,ultra thick,rounded corners] (.1,0.) rectangle (6.1,2.);
+        \end{tikzpicture}
+    \end{center}
+}
+
+
+\frame{
+    \frametitle{Outage detection}
+    \begin{columns}
+        \column{.6\textwidth}
+        %\begin{block}{RIPE Atlas}
+            %\begin{itemize}
+                %\item Monitor devices connectivity
+            %\end{itemize}
+        %\end{block} 
+        \begin{block}{Outage detection}
+            \begin{itemize}
+                \item Monitor Atlas probes disconnections
+                \item Identify burst of disconnections
+                \item Report the corresponding network or geo area
+            \end{itemize}
+        \end{block} 
+    %\begin{block}{Example}
+        %\begin{itemize}
+            %\item \href{http://ihr.iijlab.net/ihr/IR/country/?date=2018-01-19&last=7&discodate=2018-01-13+05\%3A50\%3A29&discoid=131915132}{Disconnections in Iran}
+        %\end{itemize}
+    %\end{block}
+        \column{.4\textwidth}
+        \includegraphics[width=1\textwidth]{../../disco/tma17/fig/atlas.jpg}
+        \\~\\
+
+        \hspace*{-.8cm}\includegraphics[width=1.2\textwidth]{../../disco/tma17/fig/burst.pdf}
+    \end{columns}
+}
+
+\frame{
+    \frametitle{Disco Overview}
+    \begin{columns}
+        \column{.4\textwidth}
+            \begin{block}{}
+                \begin{enumerate}
+                    \item Split disconnections in sub-streams (AS, country, geo-proximate\\ 50km radius)
+                        \\~\\
+                    \item Burst modeling and outage detection
+                        \\~\\
+                    \item Aggregation and outage reporting
+                \end{enumerate}
+            \end{block}
+        \column{.6\textwidth}
+            \includegraphics[width=\textwidth]{fig/overview.pdf}
+    \end{columns} 
+}
+
+
+\frame{
+    \frametitle{Burst modeling: Example}
+    \begin{columns}
+        \column{.5\textwidth}
+        \includegraphics[width=\textwidth]{fig/kenyanMonkey.jpg}%\\~\\
+        \column{.5\textwidth}
+        \begin{block}{} %Example: }
+            \begin{itemize}
+                \item Monkey causes blackout in Kenya at 8:30 UTC June, 7th 2016
+                \item Same day RIPE rebooted controllers
+            \end{itemize}
+            %~\\
+            %\\~\\
+        \end{block}
+    \end{columns}
+        \includegraphics[width=\textwidth]{fig/kenya_outage.png}
+}
+
+
+\frame{
+    \frametitle{Example of geo-proximate outage}
+    \begin{block}{Amsterdam outage (2017)}
+        \begin{itemize}
+            \item Disco's detection correlated with network problems between two network elements of a large provider
+        \end{itemize}
+    \end{block}
+    \begin{center}
+    \includegraphics[width=.6\textwidth]{fig/amsnew.png}
+    \end{center}
+}
+
+%\frame{
+    %\frametitle{More Examples}
+    %\begin{block}{Example from IHR website}
+        %\begin{itemize}
+            %\item \href{http://ihr.iijlab.net/ihr/IR/country/?date=2018-01-19&last=7&discodate=2018-01-13+05\%3A50\%3A29&discoid=131915132}{Disconnections in Iran}
+        %\end{itemize}
+    %\end{block}
+%}
+
+
+\frame{
+    \frametitle{AS dependency}
+    \begin{center}
+        \begin{tikzpicture}
+        \node[anchor=south west,inner sep=0] at (0,0) {\includegraphics[height=.9\textheight]{./fig/ihr_iij.png}};
+        \draw[red,ultra thick,rounded corners] (.1,4.9) rectangle (6.1,7.6);
+        \end{tikzpicture}
+    \end{center}
+}
+
+\frame{
+    \frametitle{AS dependency}
+    \begin{columns}
+    \column{.6\textwidth}
+    \begin{block}{Monitoring AS Dependency}
+                \begin{itemize}
+                    \item A network's connectivity depends on other networks 
+                    %\item These are potential bottlenecks or point of failures for your network
+                    \item Dependency changes may reveal routing anomalies
+                    \item Help operators to plan and assess infrastructure deployments
+                \end{itemize}
+        \end{block} 
+        %\begin{block}{Example}
+            %\begin{itemize}
+            %\item 2/28: \href{http://ihr.iijlab.net/ihr/36459/asn/?date=2018-03-03\&last=7\&hegemonydate=2018-02-28+17\%3A00&hegemonyy=y}{DDoS attack against Github}
+            %\end{itemize}
+        %\end{block}
+        \column{.4\textwidth}
+        \includegraphics[width=\columnwidth]{./fig/intro.jpg}\\
+    \end{columns}
+}
+
+\frame{
+    \frametitle{Approach}
+
+  \begin{columns}
+   \column{.6\textwidth}
+    \begin{block}{Measuring AS centrality:}
+        \begin{itemize}
+            \item Dataset: BGP data 
+            \item Make AS graphs
+            \item Two types of graph
+                \begin{itemize}
+                    \item Global graph: the whole Internet
+                    \item Local graph: paths towards a single AS
+                \end{itemize}
+            \item Measure nodes \emph{centrality}: 
+                \begin{itemize}
+                    \item Common transit networks 
+                    \item \emph{AS Dependencies}
+                \end{itemize}
+        \end{itemize}
+    \end{block}
+   \column{.4\textwidth}
+   \includegraphics[width=\textwidth]{fig/global_graph.jpg}
+   \\~\\~\\
+   \includegraphics[width=\textwidth]{fig/local_graph.jpg}
+   \end{columns}
+}
+
+\frame{
+    \frametitle{In Theory...}
+    \begin{block}{Betweenness Centrality (BC)}
+        %\includegraphics[width=\textwidth]{fig/atlas.jpg}
+        \begin{itemize}
+            \item Common centrality metric in graph theory
+            \item Measure the fraction of paths going through an AS
+        \end{itemize}
+    \end{block} 
+    \begin{center}
+        \includegraphics[width=.45\textwidth]{./fig/bc_illustration.jpg}
+    \end{center}
+}
+
+\frame{
+    \frametitle{...in Practice}
+    \begin{block}{BC and path sampling}
+        %\includegraphics[width=\textwidth]{fig/atlas.jpg}
+        \begin{itemize}
+            \item We don't know all AS paths on the Internet
+            \item RIS and RV give about 300+ vantage points out of 58k ASes 
+            \item BGP collections $\neq$ random sampling
+        \end{itemize}
+    \end{block} 
+    \begin{center}
+        \includegraphics[width=.5\textwidth]{./fig/real_bc_illustration.jpg}
+    \end{center}
+}
+
+\frame{
+
+    \frametitle{AS hegemony}
+
+        \begin{block}{AS hegemony}
+        \begin{equation*}
+            \mathcal{H}(v,\alpha) = \frac{1}{n-(2\lfloor\alpha n\rfloor)} \sum_{j=\lfloor\alpha n\rfloor+1}^{n-\lfloor\alpha n\rfloor} BC_{(j)}(v)h
+        \end{equation*}
+    \end{block}
+        \begin{block}{Benefits:}
+            \begin{itemize}
+                \item Same meaning as Betweenness Centrality
+                \item Vantage point consensus
+                \item Robust to sampling
+                \item Adapted to BGP
+            \end{itemize}
+        \end{block}
+
+}
+
+
+\frame{
+    \frametitle{Example AS hegemony}
+    \begin{block}{AS hegemony $\approx$ Betweenness centrality}
+        \begin{center}
+            \includegraphics[width=.75\textwidth]{fig/local_graph.jpg}\\~\\
+            \includegraphics[width=.85\textwidth]{fig/hegemony_UT.png}
+        \end{center}
+    \end{block}
+
+        %\begin{columns}
+            %\column{.5\textwidth}
+            %\includegraphics[width=\textwidth]{fig/local_graph.jpg}
+
+            %\column{.5\textwidth}
+            %\includegraphics[width=\textwidth]{fig/hegemony_UT.png}
+
+        %\end{columns}
+}
+
+\frame{
+    \frametitle{Local Graph: Google}
+        \begin{columns}
+            \column{.5\textwidth}
+            \centering
+            IPv4\\
+            \includegraphics[width=\columnwidth]{./fig/longitudinalAS15169.pdf}
+            \column{.5\textwidth}
+            \centering
+            IPv6\\
+            \includegraphics[width=\columnwidth]{./fig/longitudinalAS15169_ipv6.pdf}
+        \end{columns}
+        \begin{center} 
+            \vspace{-.5cm}\includegraphics[width=.5\columnwidth]{./fig/longitudinallegend2.pdf}
+
+        \textcolor{red}{ $\rightarrow$  IPv4: Recently measured no dependency}\\
+        \textcolor{red}{ $\rightarrow$  IPv6: Noticeable dependence to Hurricane Electric}
+        \end{center}
+}
+
+
+\frame{
+    \frametitle{Example of AS hegemony change}
+    \begin{block}{BGP leak Level3/Comcast (2017/11/07)}
+        \begin{center}
+            \includegraphics[width=.9\textwidth]{./fig/level3_comcast_leak.png}
+        \end{center}
+    \end{block}
+
+}
+
+\frame{
+    \frametitle{Online Results: Examples in 2018}
+    \begin{block}{Internet Health Report: \url{https://ihr.iijlab.net}}
+        \begin{itemize}
+            \item DoS attack 
+                \begin{itemize}
+                    \item \href{https://ihr.iijlab.net/ihr/36459/asn/?date=2018-03-03\&last=7\&hegemonydate=2018-02-28+17\%3A00\&hegemonyy=y}{Attack against Github on Feb. \nth{28}}
+                    \item \href{https://ihr.iijlab.net/ihr/52062/asn/?date=2018-03-21\&last=7\&hegemonydate=2018-03-18+07\%3A45\&hegemonyy=y}{Attacks during Russian elections Mar. \nth{18}}
+                \end{itemize}
+            \item Outage
+                \begin{itemize}
+                    \item \href{https://t.co/3IinuuJoQN}{Power outage in northern Brazil, Mar. 21st}
+                    \item \href{https://t.co/oesCp6OuvK}{DECIX outage, Apr. 4th}
+                    \item \href{https://t.co/LrGb46lYjY}{The fall of Bitcanal (\emph{the Hijack factory}), July}
+                \end{itemize}
+            \item BGP leak
+                \begin{itemize}
+                    \item \href{https://t.co/VQmo7MHV3p}{Leak from CloudFlare, Jul. 1st}
+                \end{itemize}
+            \item Censorship
+                \begin{itemize}
+                    \item Country-level bottlenecks: \href{https://t.co/XDpnL1AeLF}{Iran}, \href{}{China}, \href{}{Pakistan}, ...
+                    \item \href{https://ihr.iijlab.net/ihr/28761/asn/?date=2013-09-16&af=4}{CrimeaCom in 2013} vs. \href{https://ihr.iijlab.net/ihr/28761/asn/?date=2018-09-16&af=4}{CrimeaCom in 2018}
+                    \item \href{https://t.co/wPyakXfut4}{Exams in Iraq, June}
+                    \item \href{https://t.co/2ixTJsHPCa}{Protests in Iraq, Jul. 14-15th}
+                \end{itemize}
+        \end{itemize}
+
+    \end{block}
+}
+
+
+\frame{
+    \frametitle{Summary}
+    \begin{block}{Internet Health Report}
+        \begin{itemize}
+            \item Monitor connectivity issues
+            \item Delay, disconnection and routing anomalies 
+            \item \url{https://ihr.iijlab.net}
+        \end{itemize}
+    \end{block}
+    \begin{block}{References}
+        \scriptsize{
+        \begin{itemize}
+            \item A. Shah et al.  "Disco: Fast, good, and cheap outage detection", TMA'17.
+            \item R. Fontugne et al. "Pinpointing Delay and Forwarding Anomalies Using Large-Scale Traceroute Measurements", IMC'17.
+            \item R. Fontugne et al. "The (thin) Bridges of AS Connectivity: Measuring Dependency using AS Hegemony", PAM'18.
+        \end{itemize}
+        }
+    \end{block}
+}
+
+\appendix
+\backupbegin
+
+\frame{
+    \frametitle{Backup}
+}
+
+%\frame{
+    %\frametitle{Google}
+        %\begin{columns}
+            %\column{.5\textwidth}
+            %IPV4 local graph:
+            %\includegraphics[width=\columnwidth]{./fig/longitudinalAS15169.pdf}
+            %\column{.5\textwidth}
+            %IPv6 local graph:
+            %\includegraphics[width=\columnwidth]{./fig/longitudinalAS15169_ipv6.pdf}
+        %\end{columns}
+        %\begin{center} 
+            %\includegraphics[width=.5\columnwidth]{./fig/longitudinallegend2.pdf}
+
+            %\textcolor{red}{ $\rightarrow$  }
+        %\end{center}
+%}
+
+\frame{
+    \frametitle{Akamai}
+        \begin{columns}
+            \column{.5\textwidth}
+            IPV4 local graph:
+            \includegraphics[width=\columnwidth]{./fig/longitudinalAS20940.pdf}
+            \column{.5\textwidth}
+            IPv6 local graph:
+            \includegraphics[width=\columnwidth]{./fig/longitudinalAS20940_ipv6.pdf}
+        \end{columns}
+        \begin{center} 
+            \includegraphics[width=.5\columnwidth]{./fig/longitudinallegend2.pdf}
+
+            \textcolor{red}{ $\rightarrow$  }
+        \end{center}
+}
+
+
+\backupend
+\end{document}
